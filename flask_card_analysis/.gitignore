@@ -1,0 +1,424 @@
+# Flask Card Analysis - .gitignore
+
+# ============================================================================
+# Python
+# ============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ============================================================================
+# Flask Application Specific
+# ============================================================================
+
+# Generated animation files
+static/animations/*.html
+static/animations/*.png
+static/animations/*.gif
+
+# Uploaded files (if any)
+uploads/
+temp/
+
+# Session files
+flask_session/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================================================
+# Data Files
+# ============================================================================
+
+# CSV data files (sensitive research data)
+data/*.csv
+data/*.xlsx
+data/*.xls
+
+# Keep the data folder structure
+!data/.gitkeep
+!data/README.md
+
+# Backup files
+data/*.bak
+data/*.backup
+data/*~
+
+# ============================================================================
+# IDE and Editor
+# ============================================================================
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.*.sw[a-z]
+*.un~
+Session.vim
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================================================
+# Operating System
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# Version Control
+# ============================================================================
+
+# Git
+.git/
+*.orig
+*.rej
+
+# Mercurial
+.hg/
+.hgignore
+.hgsub
+.hgsubstate
+
+# SVN
+.svn/
+
+# ============================================================================
+# Logs and Temporary Files
+# ============================================================================
+
+# Application logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ============================================================================
+# Security and Secrets
+# ============================================================================
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# API keys and secrets
+secrets.json
+config.secret.json
+*.key
+*.pem
+*.cert
+*.crt
+
+# SSH keys
+id_rsa
+id_rsa.pub
+*.ppk
+
+# ============================================================================
+# Build and Deployment
+# ============================================================================
+
+# Build outputs
+build/
+dist/
+*.exe
+*.app
+
+# Deployment files
+.deploy/
+.deploy_*
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# ============================================================================
+# Testing
+# ============================================================================
+
+# Test outputs
+.tox/
+.coverage
+htmlcov/
+.pytest_cache/
+test-results/
+coverage/
+
+# ============================================================================
+# Documentation
+# ============================================================================
+
+# Generated documentation
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# ============================================================================
+# Node.js (if using any frontend build tools)
+# ============================================================================
+
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# ============================================================================
+# Misc
+# ============================================================================
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Image thumbnails
+thumbs/
+_thumbs/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Cache directories
+.cache/
+cache/
+
+# ============================================================================
+# Project Specific Ignores
+# ============================================================================
+
+# Large files that shouldn't be in repo
+*.mp4
+*.avi
+*.mov
+
+# Development notes
+TODO.md
+NOTES.md
+scratch/
+
+# Local configuration overrides
+config.local.py
+settings.local.py
+
+# Performance profiling
+*.prof
+*.lprof
+
+# ============================================================================
+# Keep These Files
+# ============================================================================
+
+# Important: These should NOT be ignored
+!.gitignore
+!.gitkeep
+!README.md
+!LICENSE
+!requirements.txt
+!Procfile
+!Dockerfile
+!docker-compose.yml
