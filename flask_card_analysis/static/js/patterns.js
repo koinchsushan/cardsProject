@@ -29,17 +29,36 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up interactive selectors for both tabs
     setupInteractiveSelector('success');
     setupInteractiveSelector('failure');
+    
+    // Show More button handlers
+    let successShowingAll = false;
+    let failureShowingAll = false;
+    
+    document.getElementById('success-show-more-btn').addEventListener('click', function() {
+        successShowingAll = !successShowingAll;
+        loadPatterns('success', successShowingAll ? 0 : 5);
+    });
+    
+    document.getElementById('failure-show-more-btn').addEventListener('click', function() {
+        failureShowingAll = !failureShowingAll;
+        loadPatterns('failure', failureShowingAll ? 0 : 5);
+    });
 });
 
 /**
  * Load and display pattern visualizations
  */
-async function loadPatterns(type) {
+async function loadPatterns(type, limit = 5) {
     const gridId = `${type}-patterns-grid`;
     const grid = document.getElementById(gridId);
+    const showMoreBtn = document.getElementById(`${type}-show-more-btn`);
     
     try {
-        const patterns = await fetchJSON(`/api/analyze-patterns/${type}`);
+        const url = `/api/analyze-patterns/${type}${limit === 0 ? '?limit=0' : ''}`;
+        const data = await fetchJSON(url);
+        const patterns = data.patterns;
+        const totalUnique = data.total_unique;
+        
         if (patterns.length === 0) {
             grid.innerHTML = '<p style="text-align: center; padding: 2rem;">No patterns found</p>';
             return;
@@ -63,6 +82,23 @@ async function loadPatterns(type) {
             `;
             grid.appendChild(card);
         });
+        
+        // Update header with count
+        const header = grid.closest('.patterns-section').querySelector('h3');
+        if (limit === 0) {
+            header.textContent = `All ${patterns.length} Unique ${type.charAt(0).toUpperCase() + type.slice(1)} Patterns`;
+            showMoreBtn.textContent = 'Show Top 5 Only';
+            showMoreBtn.style.display = 'inline-block';
+        } else {
+            header.textContent = `Top 5 Most Frequent ${type.charAt(0).toUpperCase() + type.slice(1)} Patterns`;
+            // Show button only if there are more patterns
+            if (totalUnique > 5) {
+                showMoreBtn.textContent = `Show All ${totalUnique} Patterns`;
+                showMoreBtn.style.display = 'inline-block';
+            } else {
+                showMoreBtn.style.display = 'none';
+            }
+        }
         
         // Populate pattern selector dropdown
         const selectId = `${type}-pattern-select`;
@@ -175,7 +211,7 @@ function setupInteractiveSelector(type) {
                     Condition: ${trial.condition} | Moves: ${trial.moves}
                 </p>
                 <iframe src="${data.file}" 
-                        style="width: 100%; height: 650px; border: 1px solid #ddd; border-radius: 8px; margin-top: 1rem;"
+                        style="width: 100%; max-width: 650px; height: 650px; border: 1px solid #ddd; border-radius: 8px; margin: 0 auto; display: block;"
                         frameborder="0">
                 </iframe>
             `;

@@ -1,6 +1,7 @@
 // Explorer Page JavaScript - Trial Selection and Visualization
 
 document.addEventListener('DOMContentLoaded', function() {
+    const conditionSelect = document.getElementById('condition-select');
     const participantSelect = document.getElementById('participant-select');
     const trialSelect = document.getElementById('trial-select');
     const trialInfo = document.getElementById('trial-info');
@@ -12,6 +13,54 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let currentParticipant = null;
     let currentTrial = null;
+    let currentCondition = '';
+    
+    /**
+     * Handle condition selection change
+     */
+    conditionSelect.addEventListener('change', function() {
+        currentCondition = this.value;
+        
+        // If participant already selected, reload trials with new filter
+        if (currentParticipant) {
+            loadTrialsForParticipant(currentParticipant);
+        }
+    });
+    
+    /**
+     * Load trials for a participant with optional condition filter
+     */
+    async function loadTrialsForParticipant(participant) {
+        try {
+            const url = `/api/get-trials/${participant}${currentCondition ? '?condition=' + encodeURIComponent(currentCondition) : ''}`;
+            const trials = await fetchJSON(url);
+            
+            trialSelect.innerHTML = '<option value="">-- Select Trial --</option>';
+            
+            if (trials.length === 0) {
+                trialSelect.innerHTML = '<option value="">-- No trials for this condition --</option>';
+                trialSelect.disabled = true;
+                hideElement(trialInfo);
+                showAnimationBtn.disabled = true;
+                showFinalBtn.disabled = true;
+                return;
+            }
+            
+            trials.forEach(trial => {
+                const option = document.createElement('option');
+                option.value = trial;
+                option.textContent = `Trial ${trial}`;
+                trialSelect.appendChild(option);
+            });
+            
+            trialSelect.disabled = false;
+            
+        } catch (error) {
+            console.error('Error fetching trials:', error);
+            showError(visualizationContainer, 'Failed to load trials for this participant');
+            showElement(visualizationContainer);
+        }
+    }
     
     /**
      * Handle participant selection change
@@ -30,26 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         currentParticipant = participant;
-        
-        // Fetch trials for this participant
-        try {
-            const trials = await fetchJSON(`/api/get-trials/${participant}`);
-            
-            trialSelect.innerHTML = '<option value="">-- Select Trial --</option>';
-            trials.forEach(trial => {
-                const option = document.createElement('option');
-                option.value = trial;
-                option.textContent = `Trial ${trial}`;
-                trialSelect.appendChild(option);
-            });
-            
-            trialSelect.disabled = false;
-            
-        } catch (error) {
-            console.error('Error fetching trials:', error);
-            showError(visualizationContainer, 'Failed to load trials for this participant');
-            showElement(visualizationContainer);
-        }
+        await loadTrialsForParticipant(participant);
     });
     
     /**
@@ -105,14 +135,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             hideElement(loadingDiv);
             
-            // Display animation in iframe to avoid JavaScript scoping issues
+            // Display animation in iframe - CSS injected in HTML handles scaling
             visualizationContainer.innerHTML = `
                 <div style="text-align: center;">
                     <h3 style="color: #667eea; margin-bottom: 1rem;">
                         Animation - Participant ${currentParticipant}, Trial ${currentTrial}
                     </h3>
                     <iframe src="${data.file}" 
-                            style="width: 100%; height: 650px; border: 1px solid #ddd; border-radius: 8px;"
+                            style="width: 100%; max-width: 650px; height: 650px; border: 1px solid #ddd; border-radius: 8px;"
                             frameborder="0">
                     </iframe>
                 </div>

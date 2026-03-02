@@ -2,6 +2,7 @@
 Card Placement Analysis - Flask Web Application
 Main Application File
 
+Place this file as 'app.py' in your flask_card_analysis folder.
 """
 
 from flask import Flask, render_template, request, jsonify, send_file
@@ -54,7 +55,7 @@ class CardPlacementVisualizer:
             'queen': '#FF6B6B',    # Red
             'king': '#4ECDC4',     # Teal
             'jack': '#45B7D1',     # Blue
-            'blank': '#95E1D3',    # Light Green
+            'blank': '#757575',    # Dark Gray (placeholder tone)
             'empty': '#F7F7F7'     # Light Gray
         }
         
@@ -99,11 +100,12 @@ class CardPlacementVisualizer:
     def extract_card_info(self, move_str):
         """
         Extract card information from movement string.
+        Handles cards with suits (queen_spades_A1) and without suits (blank_A1).
         
         Parameters:
         -----------
         move_str : str
-            Movement string like 'queen_spades_A1'
+            Movement string like 'queen_spades_A1' or 'blank_A1'
         
         Returns:
         --------
@@ -115,17 +117,32 @@ class CardPlacementVisualizer:
         try:
             parts = str(move_str).split('_')
             if len(parts) >= 2:
-                card_rank = parts[0]
-                suit = parts[1] if len(parts) > 1 else ''
-                position = parts[-1] if len(parts) > 2 else 'Off Grid'
-                color = self.card_colors.get(card_rank.lower(), self.card_colors['empty'])
+                card_rank = parts[0].lower()
+                
+                # Check if this is a blank card (only 2 parts: blank_position)
+                if card_rank == 'blank' and len(parts) == 2:
+                    suit = ''
+                    position = parts[1]
+                # Regular card with suit (3+ parts: rank_suit_position)
+                elif len(parts) >= 3:
+                    suit = parts[1]
+                    position = parts[-1]
+                # Card with suit but no position (2 parts: rank_suit)
+                else:
+                    suit = parts[1] if len(parts) > 1 else ''
+                    position = 'Off Grid'
+                
+                color = self.card_colors.get(card_rank, self.card_colors['empty'])
+                
+                # Blank cards don't have suit symbols
+                symbol = '' if card_rank == 'blank' else self.suit_symbols.get(suit, '')
                 
                 return {
                     'rank': card_rank,
                     'suit': suit,
                     'position': position,
                     'color': color,
-                    'symbol': self.suit_symbols.get(suit, '')
+                    'symbol': symbol
                 }
         except:
             pass
@@ -155,19 +172,54 @@ class CardPlacementVisualizer:
                 position_coords = self.parse_position(card_info['position'])
                 card_key = f"{card_info['rank']}_{card_info['suit']}"
                 
-                # Remove card from previous position
+                # Remove card from previous position ONLY if it's still there
                 if card_key in card_positions:
                     old_row, old_col = card_positions[card_key]
                     if old_row is not None:
-                        grid[old_row, old_col] = None
+                        # Only remove if this card is still at that position
+                        if grid[old_row, old_col] is not None:
+                            old_card_key = f"{grid[old_row, old_col]['rank']}_{grid[old_row, old_col]['suit']}"
+                            if old_card_key == card_key:
+                                grid[old_row, old_col] = None
                 
-                # Place card at new position
+                # Place card at new position (overwrites whatever was there)
                 if position_coords:
                     row, col = position_coords
                     grid[row, col] = card_info
                     card_positions[card_key] = (row, col)
                 else:
                     card_positions[card_key] = (None, None)
+        
+        return grid
+    
+    def add_blank_cards_to_grid(self, grid, final_positions):
+        """
+        Add blank cards from final_card_position_codes_1 to the grid.
+        This handles cases where blank cards appear in final position but weren't moved.
+        
+        Parameters:
+        -----------
+        grid : numpy.ndarray
+            Current grid state
+        final_positions : list
+            List of final position strings (including blanks)
+        
+        Returns:
+        --------
+        numpy.ndarray : Grid with blank cards added
+        """
+        if not final_positions:
+            return grid
+        
+        for position_str in final_positions:
+            card_info = self.extract_card_info(position_str)
+            if card_info and card_info['rank'] == 'blank':
+                position_coords = self.parse_position(card_info['position'])
+                if position_coords:
+                    row, col = position_coords
+                    # Only add blank if position is currently empty
+                    if grid[row, col] is None:
+                        grid[row, col] = card_info
         
         return grid
     
@@ -223,20 +275,25 @@ class CardPlacementVisualizer:
                                     alpha=0.9)
                     ax.add_patch(rect)
                     
-                    # Add rank text
-                    rank_text = card_info['rank'][0].upper()
-                    suit_symbol = card_info['symbol']
+                    # Add rank text - show "B" for blank cards
+                    if card_info['rank'] == 'blank':
+                        rank_text = 'B'
+                        # Blank cards don't show suit symbols
+                        suit_symbol = ''
+                    else:
+                        rank_text = card_info['rank'][0].upper()
+                        suit_symbol = card_info['symbol']
                     
-                    ax.text(j, i - 0.1, rank_text, 
+                    ax.text(j, i, rank_text, 
                            ha='center', va='center',
-                           fontsize=12, fontweight='bold',
+                           fontsize=14, fontweight='bold',
                            color='white')
                     
-                    # Add suit symbol
+                    # Add suit symbol (only for non-blank cards)
                     if suit_symbol:
-                        ax.text(j, i + 0.15, suit_symbol,
+                        ax.text(j, i + 0.25, suit_symbol,
                                ha='center', va='center',
-                               fontsize=10,
+                               fontsize=9,
                                color='white')
         
         # Add row labels
@@ -261,15 +318,22 @@ class CardPlacementVisualizer:
         trial_n = trial_info.get('trialN', 'N/A')
         condition = trial_info.get('condition', 'N/A')
         success = trial_info.get('overall_correct', 0)
+        is_pattern = trial_info.get('is_pattern', False)
         
         success_text = '✓ Success' if success == 1 else '✗ Failed'
         title_color = 'green' if success == 1 else 'red'
         
-        title = f'Participant {participant} | Trial {trial_n} | Condition: {condition} | {success_text}\n'
-        title += f'Step {step}/{total_steps}'
+        # Different format for patterns vs regular trials
+        if is_pattern:
+            # Pattern format: "Pattern #1 | Frequency: 3 trials | Cards: 4 | ✓ Success"
+            title = f'Pattern {participant} | Frequency: {trial_n} | {condition} | {success_text}'
+        else:
+            # Regular trial format
+            title = f'Participant {participant} | Trial {trial_n} | Condition: {condition} | {success_text}\n'
+            title += f'Step {step}/{total_steps}'
         
         ax.set_title(title, fontsize=11, fontweight='bold', pad=15,
-                    color=title_color if step == total_steps else 'black')
+                    color=title_color if (is_pattern or step == total_steps) else 'black')
     
     def generate_static_image(self, participant, trial_n, step=None):
         """
@@ -317,6 +381,12 @@ class CardPlacementVisualizer:
         }
         
         grid = self.create_grid_state(movements, step)
+        
+        # Add blank cards from final position if showing final state
+        if step == len(movements):
+            final_positions = trial_data.get('final_card_position_codes_1', [])
+            grid = self.add_blank_cards_to_grid(grid, final_positions)
+        
         self.plot_grid(grid, ax, step, len(movements), trial_info)
         
         fig.tight_layout()
@@ -356,8 +426,8 @@ class CardPlacementVisualizer:
         if not movements:
             return None
         
-        # Create figure
-        fig, ax = plt.subplots(figsize=self.figure_size)
+        # Create figure (keep 7x7 for high quality, will scale down in CSS)
+        fig, ax = plt.subplots(figsize=(7, 7))
         
         trial_info = {
             'participant': participant,
@@ -367,9 +437,13 @@ class CardPlacementVisualizer:
         }
         
         total_steps = len(movements)
+        final_positions = trial_data.get('final_card_position_codes_1', [])
         
         def update(frame):
             grid = self.create_grid_state(movements, frame)
+            # Add blank cards on final frame
+            if frame == total_steps:
+                grid = self.add_blank_cards_to_grid(grid, final_positions)
             self.plot_grid(grid, ax, frame, total_steps, trial_info)
             fig.tight_layout()
             return ax,
@@ -386,8 +460,52 @@ class CardPlacementVisualizer:
         os.makedirs(os.path.join('static', 'animations'), exist_ok=True)
         
         # Save animation
+        html_content = anim.to_jshtml()
+        
+        # Inject CSS to scale the matplotlib figure to fit nicely
+        # The structure is: <div class="animation"><img id="_anim_img..."></div>
+        css_injection = """
+<style>
+    /* Scale down matplotlib animation for better fit */
+    body {
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
+    
+    /* Target the animation container */
+    div.animation {
+        max-width: 550px !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        text-align: center !important;
+    }
+    
+    /* Scale the image inside - like regular img tags! */
+    div.animation img {
+        max-width: 100% !important;
+        width: auto !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Also scale the controls */
+    div.anim-controls {
+        max-width: 550px !important;
+        margin: 0 auto !important;
+    }
+</style>
+"""
+        # Inject CSS before closing head tag (or at start of body if no head)
+        if '</head>' in html_content:
+            html_content = html_content.replace('</head>', css_injection + '</head>')
+        else:
+            # If no head tag, inject at the beginning
+            html_content = css_injection + html_content
+        
         with open(anim_path, 'w') as f:
-            f.write(anim.to_jshtml())
+            f.write(html_content)
         
         plt.close()
         
@@ -428,6 +546,38 @@ def clean_card_positions(movement_list):
         cleaned_list.append("_".join(parts))
     
     return cleaned_list
+
+# Cache for pattern counters to avoid recomputing
+_pattern_cache = {'success': None, 'failure': None}
+
+def get_pattern_counter(pattern_type):
+    """
+    Get pattern counter with caching to avoid recomputing.
+    Returns Counter object with all patterns.
+    """
+    global _pattern_cache
+    
+    # Check cache
+    if _pattern_cache[pattern_type] is not None:
+        return _pattern_cache[pattern_type]
+    
+    # Compute patterns
+    if pattern_type == 'success':
+        subset_df = df[df['overall_correct'] == 1]
+    else:
+        subset_df = df[df['overall_correct'] == 0]
+    
+    position_counter = Counter()
+    for _, row in subset_df.iterrows():
+        final_positions = row['final_card_position_codes_1']
+        if final_positions and len(final_positions) > 0:
+            position_tuple = tuple(sorted(final_positions))
+            position_counter[position_tuple] += 1
+    
+    # Cache it
+    _pattern_cache[pattern_type] = position_counter
+    
+    return position_counter
 
 def load_data():
     """Load and preprocess the dataset."""
@@ -483,7 +633,10 @@ def explorer():
         return render_template('error.html', message="Dataset not loaded")
     
     participants = sorted(df['participant'].unique().tolist())
-    return render_template('explorer.html', participants=participants)
+    conditions = sorted(df['condition'].unique().tolist())
+    return render_template('explorer.html', 
+                         participants=participants,
+                         conditions=conditions)
 
 
 @app.route('/patterns')
@@ -506,8 +659,17 @@ def patterns():
 
 @app.route('/api/get-trials/<int:participant>')
 def get_trials(participant):
-    """Get all trials for a specific participant."""
-    trials = df[df['participant'] == participant]['trialN'].unique().tolist()
+    """Get all trials for a specific participant, optionally filtered by condition."""
+    condition = request.args.get('condition', '')
+    
+    # Filter by participant
+    participant_df = df[df['participant'] == participant]
+    
+    # Optionally filter by condition
+    if condition:
+        participant_df = participant_df[participant_df['condition'] == condition]
+    
+    trials = participant_df['trialN'].unique().tolist()
     return jsonify(sorted(trials))
 
 
@@ -556,21 +718,22 @@ def trial_image(participant, trial_n):
 
 @app.route('/api/analyze-patterns/<pattern_type>')
 def analyze_patterns(pattern_type):
-    """Analyze top 5 patterns for success or failure trials."""
-    if pattern_type == 'success':
-        subset_df = df[df['overall_correct'] == 1]
+    """Analyze patterns for success or failure trials with optional limit."""
+    # Get limit parameter (default 5, 0 means all)
+    limit = request.args.get('limit', '5')
+    try:
+        limit = int(limit)
+    except:
+        limit = 5
+    
+    # Use cached pattern counter
+    position_counter = get_pattern_counter(pattern_type)
+    
+    # Get patterns (limited or all)
+    if limit > 0:
+        top_patterns = position_counter.most_common(limit)
     else:
-        subset_df = df[df['overall_correct'] == 0]
-    
-    position_counter = Counter()
-    
-    for _, row in subset_df.iterrows():
-        final_positions = row['final_card_position_codes_1']
-        if final_positions and len(final_positions) > 0:
-            position_tuple = tuple(sorted(final_positions))
-            position_counter[position_tuple] += 1
-    
-    top_patterns = position_counter.most_common(5)
+        top_patterns = position_counter.most_common()
     
     patterns_data = []
     for idx, (pattern, count) in enumerate(top_patterns):
@@ -581,30 +744,26 @@ def analyze_patterns(pattern_type):
             'cards': len(pattern)
         })
     
-    return jsonify(patterns_data)
+    return jsonify({
+        'patterns': patterns_data,
+        'total_unique': len(position_counter),
+        'showing': len(patterns_data)
+    })
 
 
 @app.route('/api/pattern-image/<pattern_type>/<int:pattern_id>')
 def pattern_image(pattern_type, pattern_id):
     """Generate visualization image for a specific pattern."""
-    if pattern_type == 'success':
-        subset_df = df[df['overall_correct'] == 1]
-    else:
-        subset_df = df[df['overall_correct'] == 0]
+    # Use cached pattern counter
+    position_counter = get_pattern_counter(pattern_type)
     
-    position_counter = Counter()
-    for _, row in subset_df.iterrows():
-        final_positions = row['final_card_position_codes_1']
-        if final_positions and len(final_positions) > 0:
-            position_tuple = tuple(sorted(final_positions))
-            position_counter[position_tuple] += 1
+    # Get ALL patterns, not just top 5
+    all_patterns = position_counter.most_common()
     
-    top_patterns = position_counter.most_common(5)
-    
-    if pattern_id >= len(top_patterns):
+    if pattern_id >= len(all_patterns):
         return "Pattern not found", 404
     
-    pattern, count = top_patterns[pattern_id]
+    pattern, count = all_patterns[pattern_id]
     
     # Create isolated figure (thread-safe)
     fig = Figure(figsize=(7, 7), facecolor='white')
@@ -622,10 +781,11 @@ def pattern_image(pattern_type, pattern_id):
                 grid[row, col] = card_info
     
     trial_info = {
-        'participant': f'Pattern #{pattern_id + 1}',
-        'trialN': '',
-        'condition': f'Frequency: {count} trials',
-        'overall_correct': 1 if pattern_type == 'success' else 0
+        'participant': f'#{pattern_id + 1}',
+        'trialN': f'{count} trials',
+        'condition': f'{len(pattern)} cards',
+        'overall_correct': 1 if pattern_type == 'success' else 0,
+        'is_pattern': True  # Flag to format differently
     }
     
     visualizer.plot_grid(grid, ax, len(pattern), len(pattern), trial_info)
@@ -647,19 +807,16 @@ def pattern_trials(pattern_type, pattern_id):
     else:
         subset_df = df[df['overall_correct'] == 0]
     
-    position_counter = Counter()
-    for _, row in subset_df.iterrows():
-        final_positions = row['final_card_position_codes_1']
-        if final_positions and len(final_positions) > 0:
-            position_tuple = tuple(sorted(final_positions))
-            position_counter[position_tuple] += 1
+    # Use cached pattern counter
+    position_counter = get_pattern_counter(pattern_type)
     
-    top_patterns = position_counter.most_common(5)
+    # Get ALL patterns, not just top 5
+    all_patterns = position_counter.most_common()
     
-    if pattern_id >= len(top_patterns):
+    if pattern_id >= len(all_patterns):
         return jsonify([])
     
-    target_pattern, _ = top_patterns[pattern_id]
+    target_pattern, _ = all_patterns[pattern_id]
     target_sorted = tuple(sorted(target_pattern))
     
     matching_trials = []
